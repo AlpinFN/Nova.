@@ -1,0 +1,6 @@
+{
+  "name": "Nova Video",
+  "description": "A premium, unrestricted platform for uploading and watching videos with no limits.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
