@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "channel": {
+      "title": "Channel",
+      "description": "User profile",
+      "type": "object",
+      "properties": {
+        "handle": { "type": "string" },
+        "displayName": { "type": "string" },
+        "avatar": { "type": "string" },
+        "banner": { "type": "string" },
+        "bio": { "type": "string" },
+        "subscribers": { "type": "array" },
+        "isLive": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "blockedUserIds": { "type": "array" }
+      },
+      "required": ["handle", "displayName", "bio", "subscribers", "createdAt"]
+    },
+    "videoMeta": {
+      "title": "VideoMeta",
+      "description": "Video metadata",
+      "type": "object",
+      "properties": {
+        "channelId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "size": { "type": "number" },
+        "duration": { "type": "number" },
+        "views": { "type": "number" },
+        "videoUrl": { "type": "string" },
+        "likes": { "type": "array" }
+      },
+      "required": ["channelId", "title", "description", "thumbnail", "timestamp", "size", "views", "likes"]
+    },
+    "comment": {
+      "title": "Comment",
+      "description": "Video comment",
+      "type": "object",
+      "properties": {
+        "videoId": { "type": "string" },
+        "channelId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "likes": { "type": "array" }
+      },
+      "required": ["videoId", "channelId", "text", "timestamp", "likes"]
+    },
+    "post": {
+      "title": "Post",
+      "description": "Community post",
+      "type": "object",
+      "properties": {
+        "channelId": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "likes": { "type": "array" }
+      },
+      "required": ["channelId", "content", "timestamp", "likes"]
+    }
+  },
+  "firestore": {
+    "channels": {
+      "schema": "channel",
+      "description": "User profiles"
+    },
+    "videos": {
+      "schema": "videoMeta",
+      "description": "Video metadata"
+    },
+    "comments": {
+      "schema": "comment",
+      "description": "Comments"
+    },
+    "posts": {
+      "schema": "post",
+      "description": "Community posts"
+    }
+  }
+}

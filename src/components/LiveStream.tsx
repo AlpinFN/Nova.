@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { getChannel, getMyChannelId, setChannelLiveStatus } from "../db";
 import { Channel, ChatMessage } from "../types";
 import { formatTimeAgo } from "../utils";
+import { useLanguage } from "../LanguageContext";
 
 interface LiveStreamProps {
   channelId: string;
@@ -11,6 +12,7 @@ interface LiveStreamProps {
 }
 
 export function LiveStream({ channelId, onBack, onChannelClick }: LiveStreamProps) {
+  const { t } = useLanguage();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [myId, setMyId] = useState('');
   const [isLive, setIsLive] = useState(false);
@@ -118,7 +120,7 @@ export function LiveStream({ channelId, onBack, onChannelClick }: LiveStreamProp
               className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.15)]"
             >
               <ArrowLeft className="w-5 h-5" />
-              Return
+              {t('Return')}
             </button>
             <div className="flex-1" />
             <div className="flex items-center gap-4">

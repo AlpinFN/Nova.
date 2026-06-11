@@ -3,6 +3,7 @@ import { ArrowLeft, Heart, MessageSquare, Share2 } from "lucide-react";
 import { formatTimeAgo, formatViews } from "../utils";
 import { getVideoFile, getChannel } from "../db";
 import { VideoMeta, Channel } from "../types";
+import { useLanguage } from "../LanguageContext";
 
 interface ShortsFeedProps {
   videos: VideoMeta[];
@@ -12,18 +13,19 @@ interface ShortsFeedProps {
 }
 
 export function ShortsFeed({ videos, onBack, onVideoClick, onChannelClick }: ShortsFeedProps) {
+  const { t } = useLanguage();
   const shorts = videos.filter(v => v.isShort);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   if (shorts.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-black/50 overflow-hidden relative">
+      <div className="flex-1 flex flex-col items-center justify-center bg-black/50 overflow-hidden relative min-h-screen">
         <button 
           onClick={onBack}
-          className="absolute top-6 left-6 z-50 flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm"
+          className="absolute top-6 left-6 z-[100] flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm"
         >
           <ArrowLeft className="w-5 h-5" />
-          Return
+          {t('Return')}
         </button>
         <div className="text-zinc-500 font-display font-bold uppercase tracking-widest text-xl">
           No Short Transmissions found.
@@ -33,16 +35,16 @@ export function ShortsFeed({ videos, onBack, onVideoClick, onChannelClick }: Sho
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-black overflow-hidden relative">
+    <div className="h-[100dvh] w-full flex flex-col bg-black overflow-hidden relative">
       <button 
         onClick={onBack}
-        className="absolute top-6 left-6 z-50 flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm"
+        className="absolute top-6 left-6 z-[100] flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.3)] pointer-events-auto"
       >
         <ArrowLeft className="w-5 h-5" />
-        Return
+        {t('Return')}
       </button>
 
-      <div className="h-full w-full snap-y snap-mandatory overflow-y-scroll" style={{ scrollbarWidth: 'none' }}>
+      <div className="absolute inset-0 snap-y snap-mandatory overflow-y-auto z-0" style={{ scrollbarWidth: 'none' }}>
         {shorts.map((video, index) => (
           <ShortPlayer 
             key={video.id} 
@@ -62,14 +64,18 @@ function ShortPlayer({ video, isActive, onVisible, onChannelClick, onVideoClick 
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [isImage, setIsImage] = useState(false);
   const [channel, setChannel] = useState<Channel | null>(null);
 
   useEffect(() => {
     let url = '';
     getVideoFile(video.id).then(file => {
       if (file) {
+        setIsImage(file.type.startsWith('image/'));
         url = URL.createObjectURL(file);
         setVideoUrl(url);
+      } else if (video.videoUrl) {
+        setVideoUrl(video.videoUrl);
       }
     });
     getChannel(video.channelId).then(ch => {
@@ -82,17 +88,17 @@ function ShortPlayer({ video, isActive, onVisible, onChannelClick, onVideoClick 
   }, [video]);
 
   useEffect(() => {
-    if (isActive && videoRef.current) {
+    if (isActive && videoRef.current && !isImage) {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(() => {});
-    } else if (videoRef.current) {
+    } else if (videoRef.current && !isImage) {
       videoRef.current.pause();
     }
-  }, [isActive]);
+  }, [isActive, isImage]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
+    if (videoRef.current && !isImage) {
       if (videoRef.current.paused) {
         videoRef.current.play();
       } else {
@@ -115,17 +121,25 @@ function ShortPlayer({ video, isActive, onVisible, onChannelClick, onVideoClick 
   }, [onVisible]);
 
   return (
-    <div ref={containerRef} className="h-full w-full max-w-lg mx-auto snap-center flex justify-center relative bg-black border-x border-zinc-900 border-opacity-50 group">
+    <div ref={containerRef} className="h-full min-h-full w-full max-w-lg mx-auto snap-center flex justify-center relative bg-black border-x border-zinc-900 border-opacity-50 group">
       {videoUrl ? (
-        <video 
-          ref={videoRef}
-          src={videoUrl}
-          className="w-full h-full object-cover cursor-pointer"
-          loop
-          playsInline
-          controls
-          onClick={togglePlay}
-        />
+        isImage ? (
+          <img 
+            src={videoUrl}
+            className="w-full h-full object-cover cursor-pointer"
+            onClick={togglePlay}
+          />
+        ) : (
+          <video 
+            ref={videoRef}
+            src={videoUrl}
+            className="w-full h-full object-cover cursor-pointer"
+            loop
+            playsInline
+            autoPlay
+            onClick={togglePlay}
+          />
+        )
       ) : (
         <div className="w-full h-full object-cover flex items-center justify-center bg-zinc-900 text-zinc-600 font-display font-bold uppercase uppercase tracking-widest text-xs">
           Loading Feed...

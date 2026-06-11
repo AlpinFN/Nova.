@@ -1,4 +1,4 @@
-import { Compass, Sparkles, Youtube, Plus, Search, Layers, User, Radio, Smartphone, Bot, MessageCircle, MessageSquare, History, ListVideo } from "lucide-react";
+import { Compass, Sparkles, Flame, Shield, Youtube, Plus, Search, Layers, User, Radio, Smartphone, Hash, MessageCircle, MessageSquare, History, ListVideo, Bell, Settings, ArrowLeft } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { UploadModal } from "./components/UploadModal";
 import { VideoPlayer } from "./components/VideoPlayer";
@@ -13,6 +13,7 @@ import { CreatePostModal } from "./components/CreatePostModal";
 import { ChatsView } from "./components/ChatsView";
 import { HistoryView } from "./components/HistoryView";
 import { PlaylistsView } from "./components/PlaylistsView";
+import { Impressum } from "./components/Impressum";
 import { getVideosMeta, getMyChannelId, getChannel, checkMigration } from "./db";
 import { VideoMeta, Channel } from "./types";
 import { formatDuration, formatTimeAgo } from "./utils";
@@ -29,7 +30,8 @@ type ViewState =
   | { type: 'posts' }
   | { type: 'chats'; initialUserId?: string }
   | { type: 'history' }
-  | { type: 'playlists' };
+  | { type: 'playlists' }
+  | { type: 'impressum' };
 
 export default function App() {
   const { t, lang, setLang } = useLanguage();
@@ -37,7 +39,28 @@ export default function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<ViewState>({ type: 'home' });
+  const [viewHistory, setViewHistory] = useState<ViewState[]>([]);
+  const [view, setViewState] = useState<ViewState>(() => {
+    if (window.location.pathname === '/impressum' || window.location.hash === '#impressum') {
+      return { type: 'impressum' };
+    }
+    return { type: 'home' };
+  });
+
+  const setView = (newView: ViewState) => {
+    setViewHistory(prev => [...prev, view]);
+    setViewState(newView);
+  };
+
+  const goBack = () => {
+    if (viewHistory.length > 0) {
+      const prev = viewHistory[viewHistory.length - 1];
+      setViewHistory(history => history.slice(0, -1));
+      setViewState(prev);
+    } else {
+      setViewState({ type: 'home' });
+    }
+  };
   const [myChannel, setMyChannel] = useState<Channel | null>(null);
   const [isEditingChannel, setIsEditingChannel] = useState(false);
   const [activeTab, setActiveTab] = useState<'explore' | 'trending'>('explore');
@@ -61,8 +84,9 @@ export default function App() {
   };
 
   const filteredVideos = videos.filter(v => 
-    v.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    v.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (v.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (v.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (v.hashtags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Simple algorithm for trending
@@ -74,9 +98,9 @@ export default function App() {
     return (
       <VideoPlayer 
         video={view.video} 
-        onBack={() => setView({ type: 'home' })}
+        onBack={goBack}
         onDeleted={(id) => {
-          setView({ type: 'home' });
+          goBack();
           // No need to setVideos here, loadVideos will be triggered by useEffect
         }}
         onChannelClick={(channelId) => setView({ type: 'channel', channelId })}
@@ -89,7 +113,7 @@ export default function App() {
     return (
       <LiveStream 
         channelId={view.channelId}
-        onBack={() => setView({ type: 'home' })}
+        onBack={goBack}
         onChannelClick={(channelId) => setView({ type: 'channel', channelId })}
       />
     );
@@ -99,18 +123,9 @@ export default function App() {
     return (
       <ShortsFeed 
         videos={videos}
-        onBack={() => setView({ type: 'home' })}
+        onBack={goBack}
         onVideoClick={(video) => setView({ type: 'video', video })}
         onChannelClick={(channelId) => setView({ type: 'channel', channelId })}
-      />
-    );
-  }
-
-  if (view.type === 'ai') {
-    return (
-      <AIAssistant 
-        videos={videos}
-        onVideoClick={(video) => setView({ type: 'video', video })}
       />
     );
   }
@@ -122,7 +137,7 @@ export default function App() {
       <aside className="w-64 border-r-2 border-zinc-900 bg-zinc-950 flex flex-col hidden md:flex shrink-0">
         <div className="h-20 flex items-center px-6 border-b border-zinc-900 cursor-pointer" onClick={() => setView({ type: 'home' })}>
           <div className="w-full flex items-center justify-between">
-            <span className="font-display text-2xl font-bold tracking-tighter text-lime-400">Nova.</span>
+            <span className="font-display text-2xl font-bold tracking-tighter text-lime-400">KynxTV</span>
             <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Vol. 1</span>
           </div>
         </div>
@@ -135,7 +150,7 @@ export default function App() {
             onClick={() => { setView({ type: 'home' }); setActiveTab('explore'); }}
           />
           <NavItem 
-            icon={<Sparkles />} 
+            icon={<Flame />} 
             label={t('Trending')} 
             active={view.type === 'home' && activeTab === 'trending'}
             onClick={() => { setView({ type: 'home' }); setActiveTab('trending'); }}
@@ -147,8 +162,8 @@ export default function App() {
             onClick={() => setView({ type: 'shorts' })}
           />
           <NavItem 
-            icon={<Bot />} 
-            label={t('AI Assistant')} 
+            icon={<Hash />} 
+            label={t('Tag Search')} 
             active={view.type === 'ai'}
             onClick={() => setView({ type: 'ai' })}
           />
@@ -197,6 +212,18 @@ export default function App() {
             active={false}
             onClick={() => setIsCreatingPost(true)}
           />
+          <NavItem 
+            icon={<Shield />} 
+            label="Impressum" 
+            active={view.type === 'impressum'}
+            onClick={() => setView({ type: 'impressum' })}
+          />
+          <NavItem 
+            icon={<Settings />} 
+            label="Settings" 
+            active={false}
+            onClick={() => alert("Settings opened")}
+          />
         </nav>
 
         <div className="p-6 border-t border-zinc-900 space-y-4">
@@ -224,9 +251,16 @@ export default function App() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-zinc-950">
         {/* Top Navbar */}
         <header className="h-20 border-b border-zinc-900 bg-zinc-950 flex items-center justify-between px-6 shrink-0 sticky top-0 z-10">
-          {/* Mobile Logo */}
-          <div className="md:hidden flex items-center cursor-pointer" onClick={() => setView({ type: 'home' })}>
-            <span className="font-display text-2xl font-bold tracking-tighter text-lime-400">Nova.</span>
+          {/* Mobile Logo & Return */}
+          <div className="md:hidden flex items-center cursor-pointer gap-2" onClick={view.type !== 'home' ? goBack : () => setView({ type: 'home' })}>
+            {view.type !== 'home' ? (
+              <>
+                <ArrowLeft className="w-5 h-5 text-zinc-400" />
+                <span className="text-zinc-400 font-bold uppercase text-xs">{t('Return')}</span>
+              </>
+            ) : (
+              <span className="font-display text-2xl font-bold tracking-tighter text-lime-400">KynxTV</span>
+            )}
           </div>
 
           {/* Search */}
@@ -246,6 +280,13 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-4">
+            <button 
+              className="relative p-2 text-zinc-400 hover:text-zinc-100 transition-colors hidden md:block"
+              onClick={() => alert(t('No new notifications'))}
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-lime-400 rounded-full border-2 border-zinc-950"></span>
+            </button>
             <div className="md:hidden">
               <button 
                 onClick={() => setIsUploading(true)} 
@@ -321,10 +362,15 @@ export default function App() {
           <div className="flex-1 overflow-y-auto w-full">
             <PostsFeed />
           </div>
+        ) : view.type === 'ai' ? (
+          <AIAssistant 
+            videos={videos}
+            onVideoClick={(video) => setView({ type: 'video', video })}
+          />
         ) : view.type === 'chats' ? (
           <ChatsView 
             initialUserId={view.initialUserId}
-            onBack={() => setView({ type: 'home' })} 
+            onBack={goBack} 
             onChannelClick={(channelId) => setView({ type: 'channel', channelId })} 
           />
         ) : view.type === 'history' ? (
@@ -345,6 +391,8 @@ export default function App() {
               setView({ type: 'chats', initialUserId: channelId });
             }}
           />
+        ) : view.type === 'impressum' ? (
+          <Impressum onBack={goBack} />
         ) : null}
       </main>
 

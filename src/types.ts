@@ -21,6 +21,7 @@ export interface VideoMeta {
   size: number;
   duration?: number;
   views: number;
+  videoUrl?: string;
   likes: string[];
   isShort?: boolean;
   hashtags?: string[];
@@ -65,6 +66,7 @@ export interface Post {
   imageUrl?: string;
   timestamp: number;
   likes: string[];
+  replies?: { id: string; channelId: string; text: string; timestamp: number }[];
 }
 
 export interface ChatMessage {

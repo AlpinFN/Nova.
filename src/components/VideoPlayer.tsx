@@ -1,4 +1,4 @@
-import { ArrowLeft, MoreVertical, Trash2, Settings, Edit2, PlaySquare, Subtitles, Smile, X, ListPlus } from "lucide-react";
+import { ArrowLeft, MoreVertical, Trash2, Settings, Edit2, PlaySquare, Subtitles, Smile, X, ListPlus, Link2, Download, ThumbsDown, Gauge } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { getVideoFile, deleteVideo, getChannel, getMyChannelId, toggleSubscribe, addView, getVideosMeta, addHistoryItem, addReaction, updateVideoMeta, getPlaylists, updatePlaylist } from "../db";
 import { VideoMeta, Channel, SubtitleStyle, Playlist } from "../types";
@@ -6,6 +6,7 @@ import { formatTimeAgo, formatDuration } from "../utils";
 import { Comments } from "./Comments";
 import { EditVideoModal } from "./EditVideoModal";
 import { motion, AnimatePresence } from "motion/react";
+import { useLanguage } from "../LanguageContext";
 
 interface VideoPlayerProps {
   video: VideoMeta;
@@ -19,6 +20,7 @@ const QUALITY_OPTIONS = ['180p', '360p', '480p', '720p', '1080p', '1440p', '4K',
 const REACTIONS = ['🔥', '❤️', '🚀', '😂', '🤯'];
 
 export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoClick }: VideoPlayerProps) {
+  const { t } = useLanguage();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showQuality, setShowQuality] = useState(false);
@@ -64,6 +66,8 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
         if (file) {
           url = URL.createObjectURL(file);
           setVideoUrl(url);
+        } else if (video.videoUrl) {
+          setVideoUrl(video.videoUrl);
         }
         setChannel(ch || null);
         setMyId(myChannelId);
@@ -183,7 +187,7 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
               className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 px-6 py-3 rounded-full shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.15)]"
             >
               <ArrowLeft className="w-5 h-5" />
-              Return
+              {t('Return')}
             </button>
             <div className="flex-1" />
           </div>
@@ -353,21 +357,28 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
                       </button>
                     )
                   })}
+                  <button 
+                    onClick={() => alert('Feedback recorded.')}
+                    className="flex items-center gap-2 px-4 py-2 hover:bg-zinc-800 rounded-full transition-colors font-bold text-xs text-zinc-400"
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
-                    className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors"
-                  >
-                    <ListPlus className="w-4 h-4" />
-                    Save
-                  </button>
-                  {showPlaylistMenu && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setShowPlaylistMenu(false)} />
-                      <div className="absolute left-0 bottom-full mb-2 w-64 bg-zinc-900/95 backdrop-blur-md rounded-[1.5rem] border border-zinc-800 z-40 overflow-hidden shadow-2xl p-4 flex flex-col gap-2">
-                        <span className="font-bold text-xs uppercase tracking-widest text-zinc-400 mb-2">Save to Playlist</span>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
+                      className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors"
+                    >
+                      <ListPlus className="w-4 h-4" />
+                      Save
+                    </button>
+                    {showPlaylistMenu && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setShowPlaylistMenu(false)} />
+                        <div className="absolute left-0 bottom-full mb-2 w-64 bg-zinc-900/95 backdrop-blur-md rounded-[1.5rem] border border-zinc-800 z-40 overflow-hidden shadow-2xl p-4 flex flex-col gap-2">
+                          <span className="font-bold text-xs uppercase tracking-widest text-zinc-400 mb-2">Save to Playlist</span>
                         {myPlaylists.length === 0 ? (
                           <div className="text-xs text-zinc-500 font-bold uppercase tracking-widest text-center py-4">No playlists. Create one in the Playlists tab.</div>
                         ) : (
@@ -388,6 +399,28 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
                       </div>
                     </>
                   )}
+                  </div>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link Copied!"); }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors">
+                    <Link2 className="w-4 h-4"/> Share
+                  </button>
+                  <button onClick={() => {
+                    if (videoUrl) {
+                      const a = document.createElement('a');
+                      a.href = videoUrl;
+                      a.download = `${video.title || 'video'}.mp4`;
+                      a.click();
+                    }
+                  }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors">
+                    <Download className="w-4 h-4"/> Download
+                  </button>
+                  <button onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.playbackRate = videoRef.current.playbackRate === 1 ? 1.5 : (videoRef.current.playbackRate === 1.5 ? 2 : 1);
+                      alert(`Playback Rate: ${videoRef.current.playbackRate}x`);
+                    }
+                  }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors">
+                    <Gauge className="w-4 h-4"/> Speed
+                  </button>
                 </div>
               </div>
               

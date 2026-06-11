@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Comment, Channel } from '../types';
 import { getCommentsForVideo, getChannel, getMyChannelId, addComment, deleteComment, likeComment } from '../db';
 import { formatTimeAgo } from '../utils';
-import { ThumbsUp, MessageSquare, Trash2 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, Trash2, Flag, CheckCircle2 } from 'lucide-react';
 
 interface CommentsProps {
   videoId: string;
@@ -83,7 +83,10 @@ export function Comments({ videoId }: CommentsProps) {
         </div>
         <div className="flex-1">
           <div className="flex items-baseline gap-2 mb-1">
-            <span className="font-display font-bold text-lime-400">{ch?.displayName || 'Unknown'}</span>
+            <span className="font-display font-bold text-lime-400 flex items-center gap-1">
+              {ch?.displayName || 'Unknown'}
+              {ch && ch.subscribers.length > 2 && <CheckCircle2 className="w-3 h-3 text-lime-400" />}
+            </span>
             <span className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
               {formatTimeAgo(c.timestamp)}
             </span>
@@ -96,16 +99,24 @@ export function Comments({ videoId }: CommentsProps) {
               <ThumbsUp className="w-3.5 h-3.5" />
               <span>{c.likes?.length || 0}</span>
             </button>
+            <button onClick={() => alert('Feedback recorded')} className="flex items-center gap-1.5 hover:text-zinc-300 transition-colors">
+              <ThumbsDown className="w-3.5 h-3.5" />
+            </button>
             {!isReply && (
               <button onClick={() => setReplyInput(replyInput === c.id ? null : c.id)} className="flex items-center gap-1.5 hover:text-zinc-300 transition-colors">
                 <MessageSquare className="w-3.5 h-3.5" />
                 Reply
               </button>
             )}
-            {c.channelId === myId && (
+            {c.channelId === myId ? (
               <button onClick={() => handleDelete(c.id)} className="flex items-center gap-1.5 hover:text-red-400 transition-colors ml-auto">
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete
+              </button>
+            ) : (
+              <button onClick={() => alert('Comment reported')} className="flex items-center gap-1.5 hover:text-orange-400 transition-colors ml-auto">
+                <Flag className="w-3.5 h-3.5" />
+                Report
               </button>
             )}
           </div>

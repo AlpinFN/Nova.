@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Channel, VideoMeta } from '../types';
 import { getChannel, getChannels, getVideosMeta, toggleSubscribe, getMyChannelId } from '../db';
-import { Settings, MessageSquare } from 'lucide-react';
+import { Settings, MessageSquare, CheckCircle2, MoreVertical, Link, Ban } from 'lucide-react';
 import { formatTimeAgo, formatDuration } from '../utils';
 
 interface ChannelViewProps {
@@ -83,6 +83,9 @@ export function ChannelView({ channelId, onVideoClick, onEditClick, onLiveClick,
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold text-zinc-100 uppercase tracking-tighter mb-2 flex items-center gap-4">
                 {channel.displayName}
+                {channel.subscribers.length > 1 && (
+                  <CheckCircle2 className="w-8 h-8 text-lime-400" />
+                )}
                 {channel.isLive && (
                   <span className="px-3 py-1 bg-red-500/20 text-red-500 text-xs tracking-widest font-bold uppercase rounded-full border border-red-500/50 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -108,6 +111,10 @@ export function ChannelView({ channelId, onVideoClick, onEditClick, onLiveClick,
             </div>
 
             <div className="flex items-center gap-4">
+              <div className="flex gap-2">
+                 <button onClick={() => alert("Link copied!")} className="p-3 bg-zinc-900 rounded-full text-zinc-400 hover:text-zinc-100"><Link className="w-5 h-5"/></button>
+                 {!isMe && <button onClick={() => alert("User blocked.")} className="p-3 bg-zinc-900 rounded-full text-zinc-400 hover:text-zinc-100"><Ban className="w-5 h-5"/></button>}
+              </div>
               {isMe ? (
                 <button 
                   onClick={onEditClick}
