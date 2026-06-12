@@ -89,9 +89,15 @@ export function CreatePostModal({ onPostCreated, onCancel }: CreatePostProps) {
       likes: []
     };
     
-    await addPost(newPost);
-    setIsPublishing(false);
-    onPostCreated();
+    try {
+      await addPost(newPost);
+      onPostCreated();
+    } catch (e: any) {
+      alert("Error publishing post: " + e.message);
+      console.error(e);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (

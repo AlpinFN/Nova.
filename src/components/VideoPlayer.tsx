@@ -1,4 +1,4 @@
-import { ArrowLeft, MoreVertical, Trash2, Settings, Edit2, PlaySquare, Subtitles, Smile, X, ListPlus, Link2, Download, ThumbsDown, Gauge } from "lucide-react";
+import { ArrowLeft, ArrowDown, MoreVertical, Trash2, Settings, Edit2, PlaySquare, Subtitles, Smile, X, ListPlus, Link2, Download, ThumbsDown, Gauge, Volume2, Sparkles } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { getVideoFile, deleteVideo, getChannel, getMyChannelId, toggleSubscribe, addView, getVideosMeta, addHistoryItem, addReaction, updateVideoMeta, getPlaylists, updatePlaylist } from "../db";
 import { VideoMeta, Channel, SubtitleStyle, Playlist } from "../types";
@@ -11,17 +11,20 @@ import { useLanguage } from "../LanguageContext";
 interface VideoPlayerProps {
   video: VideoMeta;
   onBack: () => void;
+  onMinimize?: () => void;
   onDeleted: (id: string) => void;
   onChannelClick: (channelId: string) => void;
   onVideoClick: (video: VideoMeta) => void;
+  onEditInStudio?: () => void;
 }
 
 const QUALITY_OPTIONS = ['180p', '360p', '480p', '720p', '1080p', '1440p', '4K', '8K'];
 const REACTIONS = ['🔥', '❤️', '🚀', '😂', '🤯'];
 
-export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoClick }: VideoPlayerProps) {
+export function VideoPlayer({ video, onBack, onMinimize, onDeleted, onChannelClick, onVideoClick, onEditInStudio }: VideoPlayerProps) {
   const { t } = useLanguage();
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isImage, setIsImage] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showQuality, setShowQuality] = useState(false);
   const [quality, setQuality] = useState('1080p');
@@ -33,9 +36,69 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
   const [myId, setMyId] = useState('');
   const [recommended, setRecommended] = useState<VideoMeta[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // New features
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
   const [liveReactions, setLiveReactions] = useState<{id: string, emoji: string, left: number}[]>([]);
+
+  // Use useEffect to handle video events
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onTimeUpdate = () => setCurrentTime(video.currentTime);
+    const onEnded = () => {
+      setIsPlaying(false);
+      if (recommended.length > 0) {
+        onVideoClick(recommended[0]);
+      }
+    };
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onLoadedMetadata = () => setDuration(video.duration);
+
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+    };
+  }, [recommended, onVideoClick]);
+
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (videoRef.current) {
+      if (videoRef.current.paused) videoRef.current.play();
+      else videoRef.current.pause();
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    setCurrentTime(time);
+    if (videoRef.current) {
+      videoRef.current.currentTime = time;
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
   const [showSubtitles, setShowSubtitles] = useState(false);
   const [showSubtitleSettings, setShowSubtitleSettings] = useState(false);
   const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>({ fontSize: 'text-xl', color: 'text-white', background: 'bg-black/50' });
@@ -64,9 +127,11 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
     ]).then(([file, ch, myChannelId, allVids, pl]) => {
       if (mounted) {
         if (file) {
+          setIsImage(file.type.startsWith('image/'));
           url = URL.createObjectURL(file);
           setVideoUrl(url);
         } else if (video.videoUrl) {
+          setIsImage(video.mediaType === 'image');
           setVideoUrl(video.videoUrl);
         }
         setChannel(ch || null);
@@ -189,30 +254,102 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
               <ArrowLeft className="w-5 h-5" />
               {t('Return')}
             </button>
+            {onMinimize && (
+              <button 
+                onClick={onMinimize}
+                className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 justify-center w-12 h-12 rounded-full shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.15)] md:hidden"
+              >
+                <ArrowDown className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex-1" />
           </div>
 
           {/* Video Player */}
-          <div className="w-full bg-black flex flex-col justify-center border-b border-zinc-900 border-x-0 relative group">
-            <div className="w-full max-w-6xl mx-auto aspect-video relative overflow-hidden">
+          <div className="w-full bg-black flex flex-col justify-center border-b border-lime-400/20 border-x-0 relative group shadow-[0_4px_30px_rgba(163,230,53,0.05)]">
+            <div 
+              ref={containerRef}
+              className="w-full max-w-6xl mx-auto aspect-video relative bg-black/90 group"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+            >
               {videoUrl ? (
                 <>
-                  <video 
-                    ref={videoRef}
-                    src={videoUrl} 
-                    controls 
-                    autoPlay 
-                    onEnded={() => {
-                      if (recommended.length > 0) {
-                        onVideoClick(recommended[0]);
-                      }
-                    }}
-                    className="w-full h-full object-contain transition-all duration-300"
-                    style={getQualityStyles(quality)}
-                  />
+                  {isImage ? (
+                    <img 
+                      src={videoUrl} 
+                      className="w-full h-full object-contain transition-all duration-300"
+                      alt={video.title}
+                    />
+                  ) : (
+                    <video 
+                      ref={videoRef}
+                      src={videoUrl} 
+                      autoPlay 
+                      playsInline
+                      onClick={() => togglePlay()}
+                      className="w-full h-full object-contain transition-all duration-300 cursor-pointer"
+                      style={getQualityStyles(quality)}
+                    />
+                  )}
                   {isBuffering && (
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-10">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-10 pointer-events-none">
                       <span className="font-display font-bold text-lime-400 tracking-widest uppercase animate-pulse">Buffering {quality}...</span>
+                    </div>
+                  )}
+                  {(!isImage && videoUrl) && (
+                    <div className={`absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent transition-opacity duration-300 ${(!isPlaying || isHovering) ? 'opacity-100' : 'opacity-0'} z-20`}>
+                       {/* Progress Bar */}
+                       <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-800 cursor-pointer group/seek" onClick={(e) => {
+                         const rect = e.currentTarget.getBoundingClientRect();
+                         const pos = (e.clientX - rect.left) / rect.width;
+                         const time = pos * duration;
+                         setCurrentTime(time);
+                         if (videoRef.current) videoRef.current.currentTime = time;
+                       }}>
+                         <div className="h-full bg-lime-400 relative" style={{ width: `${(currentTime / duration) * 100 || 0}%` }}>
+                           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-lime-400 rounded-full opacity-0 group-hover/seek:opacity-100 transition-opacity translate-x-1/2" />
+                         </div>
+                       </div>
+                       
+                       <div className="flex items-center justify-between pt-4">
+                         <div className="flex items-center gap-4">
+                            <button onClick={() => togglePlay()} className="text-white hover:text-lime-400 transition-colors">
+                              {isPlaying ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
+                              ) : (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                              )}
+                            </button>
+                            <div className="flex items-center gap-2 group/vol">
+                              <button onClick={() => {
+                                if (videoRef.current) {
+                                  videoRef.current.muted = !videoRef.current.muted;
+                                }
+                              }} className="text-white hover:text-lime-400 transition-colors">
+                                <Volume2 className="w-5 h-5" />
+                              </button>
+                              <input 
+                                type="range" min="0" max="1" step="0.01" defaultValue="1"
+                                className="w-0 overflow-hidden group-hover/vol:w-16 transition-all duration-300 accent-lime-400"
+                                onChange={(e) => {
+                                  if (videoRef.current) {
+                                    videoRef.current.volume = parseFloat(e.target.value);
+                                    videoRef.current.muted = false;
+                                  }
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-white font-mono">
+                              {formatDuration(currentTime)} / {formatDuration(duration)}
+                            </span>
+                         </div>
+                         <div className="flex items-center gap-4">
+                           <button onClick={toggleFullscreen} className="text-white hover:text-lime-400 transition-colors">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                           </button>
+                         </div>
+                       </div>
                     </div>
                   )}
                 </>
@@ -400,9 +537,14 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
                     </>
                   )}
                   </div>
-                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link Copied!"); }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors">
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.origin + "/#video=" + video.id); alert("Link Copied!"); }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors hover:border-lime-400 hover:text-lime-400">
                     <Link2 className="w-4 h-4"/> Share
                   </button>
+                  {onEditInStudio && isMe && (
+                    <button onClick={onEditInStudio} className="flex items-center gap-2 px-4 py-3 bg-lime-400/10 border border-lime-400/20 rounded-full text-xs font-bold uppercase tracking-widest text-lime-400 hover:bg-lime-400/20 transition-colors">
+                      <Sparkles className="w-4 h-4"/> Edit in Studio
+                    </button>
+                  )}
                   <button onClick={() => {
                     if (videoUrl) {
                       const a = document.createElement('a');
@@ -421,6 +563,23 @@ export function VideoPlayer({ video, onBack, onDeleted, onChannelClick, onVideoC
                   }} className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-colors">
                     <Gauge className="w-4 h-4"/> Speed
                   </button>
+                  <div className="flex items-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-full">
+                    <Volume2 className="w-4 h-4 text-zinc-300" />
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="1" 
+                      step="0.01" 
+                      defaultValue="1"
+                      className="w-20 accent-lime-400"
+                      onChange={(e) => {
+                        if (videoRef.current) {
+                          videoRef.current.volume = parseFloat(e.target.value);
+                          videoRef.current.muted = false;
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               

@@ -26,6 +26,7 @@ export interface VideoMeta {
   isShort?: boolean;
   hashtags?: string[];
   reactions?: Record<string, number>;
+  mediaType?: 'video' | 'image';
 }
 
 export interface Comment {

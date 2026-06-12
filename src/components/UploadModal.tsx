@@ -32,12 +32,12 @@ export function UploadModal({ onClose, onUploadComplete }: UploadModalProps) {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const selected = e.dataTransfer.files[0];
-      if (selected.type.startsWith('video/')) {
+      if (selected.type.startsWith('video/') || selected.type.startsWith('image/')) {
         setFile(selected);
         const nameWithoutExt = selected.name.replace(/\.[^/.]+$/, "");
         setTitle(nameWithoutExt);
       } else {
-        alert("Please drop a video file.");
+        alert("Please drop a video or image file.");
       }
     }
   };
@@ -77,7 +77,7 @@ export function UploadModal({ onClose, onUploadComplete }: UploadModalProps) {
       // 1. Generate thumbnail & duration
       const { thumbnail, duration, width, height } = await generateThumbnail(file);
       
-      const isShort = height > width;
+      const isShort = height > width && file.type.startsWith('video/');
       
       if (isShort && duration > 180) {
         alert(`Short (Vertical) videos cannot exceed 3 minutes. Your video is ${Math.round(duration)} seconds long.`);
@@ -107,11 +107,22 @@ export function UploadModal({ onClose, onUploadComplete }: UploadModalProps) {
         views: 0,
         likes: [],
         isShort,
-        hashtags: parsedHashtags
+        hashtags: parsedHashtags,
+        mediaType: file.type.startsWith('image/') ? 'image' : 'video'
       };
 
       // 3. Save to IDB
-      await saveVideo(meta, file);
+      try {
+        await saveVideo(meta, file);
+      } catch (err: any) {
+        if (err.message && err.message.includes('413')) {
+           alert("File is too large. Please try a smaller file.");
+        } else {
+           alert("Upload failed. Server error or file too large.");
+        }
+        setIsProcessing(false);
+        return;
+      }
 
       onUploadComplete(meta);
       onClose();
@@ -151,7 +162,7 @@ export function UploadModal({ onClose, onUploadComplete }: UploadModalProps) {
               </div>
               <p className="font-display text-xl font-bold uppercase tracking-widest text-zinc-100 mb-4 group-hover:text-lime-400 transition-colors">Transmit New Data</p>
               <p className="font-sans text-xs font-bold tracking-widest uppercase text-zinc-500 mb-8 leading-relaxed max-w-xs mx-auto">
-                Select or drag a video file. Unrestricted limits. Local persistence.
+                Select or drag a video or image file. Unrestricted limits. Local persistence.
               </p>
               <button className="font-display font-bold uppercase tracking-widest text-sm bg-lime-400 text-lime-950 px-8 py-4 rounded-full hover:bg-lime-500 hover:shadow-[0_0_20px_rgba(163,230,53,0.3)] transition-all">
                 Select File
@@ -160,7 +171,7 @@ export function UploadModal({ onClose, onUploadComplete }: UploadModalProps) {
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
-                accept="video/*" 
+                accept="video/*,image/*" 
                 onChange={handleFileChange}
               />
             </div>

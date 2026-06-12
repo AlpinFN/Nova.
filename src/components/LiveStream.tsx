@@ -1,4 +1,4 @@
-import { ArrowLeft, Users, Send } from "lucide-react";
+import { ArrowLeft, ArrowDown, Users, Send } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { getChannel, getMyChannelId, setChannelLiveStatus } from "../db";
 import { Channel, ChatMessage } from "../types";
@@ -8,10 +8,11 @@ import { useLanguage } from "../LanguageContext";
 interface LiveStreamProps {
   channelId: string;
   onBack: () => void;
+  onMinimize?: () => void;
   onChannelClick: (channelId: string) => void;
 }
 
-export function LiveStream({ channelId, onBack, onChannelClick }: LiveStreamProps) {
+export function LiveStream({ channelId, onBack, onMinimize, onChannelClick }: LiveStreamProps) {
   const { t } = useLanguage();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [myId, setMyId] = useState('');
@@ -122,6 +123,14 @@ export function LiveStream({ channelId, onBack, onChannelClick }: LiveStreamProp
               <ArrowLeft className="w-5 h-5" />
               {t('Return')}
             </button>
+            {onMinimize && (
+              <button 
+                onClick={onMinimize}
+                className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-zinc-400 hover:text-lime-400 transition-colors bg-zinc-900 justify-center w-12 h-12 rounded-full shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.15)] md:hidden ml-2"
+              >
+                <ArrowDown className="w-5 h-5" />
+              </button>
+            )}
             <div className="flex-1" />
             <div className="flex items-center gap-4">
               {isLive && (

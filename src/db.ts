@@ -1,3 +1,4 @@
+import { set as idbSet, get as idbGet, del as idbDel } from 'idb-keyval';
 import { VideoMeta, Channel, Comment, Post, ChatThread, DirectMessage, Playlist, HistoryItem } from './types';
 import { db, auth, loginWithGoogle } from './firebase';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
@@ -63,18 +64,10 @@ export async function getVideosMeta(): Promise<VideoMeta[]> {
 }
 
 export async function saveVideo(meta: VideoMeta, file: File): Promise<void> {
-  // Upload video file
-  const formData = new FormData();
-  formData.append('video', file);
-  const res = await fetch('/api/upload', {
-    method: 'POST',
-    body: formData
-  });
-  if (!res.ok) throw new Error('Upload failed');
-  const { url } = await res.json();
+  // Store file locally instead of stateless server API
+  await idbSet(`video_file_${meta.id}`, file);
   
-  meta.videoUrl = url; // save url inside meta
-
+  meta.videoUrl = `/local/${meta.id}`; // Optional placeholder URL
   await setDoc(doc(db, META_COLLECTION, meta.id), meta);
 }
 
@@ -83,12 +76,12 @@ export async function updateVideoMeta(meta: VideoMeta): Promise<void> {
 }
 
 export async function getVideoFile(id: string): Promise<File | undefined> {
-  // We use videoUrl instead of File now, returning undefined so Player uses meta.videoUrl
-  return undefined;
+  return await idbGet(`video_file_${id}`);
 }
 
 export async function deleteVideo(id: string): Promise<void> {
   await deleteDoc(doc(db, META_COLLECTION, id));
+  await idbDel(`video_file_${id}`);
 }
 
 export async function toggleSubscribe(targetChannelId: string, myChannelId: string): Promise<void> {
@@ -125,6 +118,11 @@ export async function getCommentsForVideo(videoId: string): Promise<Comment[]> {
   return snapshot.docs.map(d => d.data() as Comment).sort((a,b) => b.timestamp - a.timestamp);
 }
 
+export async function getCommentsAll(): Promise<Comment[]> {
+  const snapshot = await getDocs(collection(db, COMMENTS_COLLECTION));
+  return snapshot.docs.map(d => d.data() as Comment);
+}
+
 export async function addComment(comment: Comment): Promise<void> {
   await setDoc(doc(db, COMMENTS_COLLECTION, comment.id), comment);
 }
@@ -155,7 +153,15 @@ export async function getPostsAll(): Promise<Post[]> {
 }
 
 export async function addPost(post: Post): Promise<void> {
+  if (post.imageUrl && post.imageUrl.startsWith('data:')) {
+    await idbSet(`post_img_${post.id}`, post.imageUrl);
+    post.imageUrl = `/local_post/${post.id}`;
+  }
   await setDoc(doc(db, POSTS_COLLECTION, post.id), post);
+}
+
+export async function getPostImage(id: string): Promise<string | undefined> {
+  return await idbGet(`post_img_${id}`);
 }
 
 export async function deletePost(id: string): Promise<void> {

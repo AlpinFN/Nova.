@@ -112,7 +112,10 @@ export function ChannelView({ channelId, onVideoClick, onEditClick, onLiveClick,
 
             <div className="flex items-center gap-4">
               <div className="flex gap-2">
-                 <button onClick={() => alert("Link copied!")} className="p-3 bg-zinc-900 rounded-full text-zinc-400 hover:text-zinc-100"><Link className="w-5 h-5"/></button>
+                 <button onClick={() => {
+                   navigator.clipboard.writeText(window.location.origin + "/#channel=" + channel.id);
+                   alert("Profile link copied!");
+                 }} className="p-3 bg-zinc-900 rounded-full text-zinc-400 hover:text-zinc-100"><Link className="w-5 h-5"/></button>
                  {!isMe && <button onClick={() => alert("User blocked.")} className="p-3 bg-zinc-900 rounded-full text-zinc-400 hover:text-zinc-100"><Ban className="w-5 h-5"/></button>}
               </div>
               {isMe ? (

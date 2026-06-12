@@ -230,7 +230,7 @@ export function ChatsView({ onBack, onChannelClick, initialUserId }: ChatsViewPr
              />
 
              <div className="flex-1 overflow-y-auto max-h-96 pr-2">
-                {Object.values(channels)
+                {(Object.values(channels) as Channel[])
                   .filter(c => c.id !== myId)
                   .filter(c => !newChatQuery || c.displayName.toLowerCase().includes(newChatQuery.toLowerCase()) || c.handle.toLowerCase().includes(newChatQuery.toLowerCase()))
                   .map(c => {

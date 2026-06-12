@@ -54,13 +54,60 @@ export function formatViews(views: number): string {
 
 export function generateThumbnail(file: File): Promise<{ thumbnail: string, duration: number, width: number, height: number }> {
   return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+
+    if (file.type.startsWith('image/')) {
+      const img = new Image();
+      let hasFinished = false;
+
+      const finish = (result: any) => {
+        if (hasFinished) return;
+        hasFinished = true;
+        URL.revokeObjectURL(url);
+        resolve(result);
+      };
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1280;
+        canvas.height = img.naturalHeight || 720;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          finish({
+            thumbnail: canvas.toDataURL('image/jpeg', 0.6),
+            duration: 0,
+            width: canvas.width,
+            height: canvas.height
+          });
+        } else {
+          finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: 0, width: 640, height: 360 });
+        }
+      };
+      img.onerror = () => {
+        finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: 0, width: 640, height: 360 });
+      };
+      
+      setTimeout(() => finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: 0, width: 640, height: 360 }), 5000);
+      
+      img.src = url;
+      return;
+    }
+
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.playsInline = true;
     video.muted = true;
     
-    // We need objectURL to load video in memory
-    const url = URL.createObjectURL(file);
+    let isFinished = false;
+    const finish = (result: any) => {
+      if (isFinished) return;
+      isFinished = true;
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(url);
+      resolve(result);
+    };
 
     video.onloadedmetadata = () => {
       // Seek to 1 second or 20% of video
@@ -69,27 +116,29 @@ export function generateThumbnail(file: File): Promise<{ thumbnail: string, dura
 
     video.onseeked = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 1280;
-      canvas.height = video.videoHeight || 720;
+      canvas.width = 640;
+      canvas.height = 360;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        resolve({
-          thumbnail: canvas.toDataURL('image/jpeg', 0.6),
-          duration: video.duration,
-          width: canvas.width,
-          height: canvas.height
+        finish({
+          thumbnail: canvas.toDataURL('image/jpeg', 0.5),
+          duration: video.duration || 0,
+          width: video.videoWidth || 640,
+          height: video.videoHeight || 360
         });
       } else {
-        reject(new Error("Could not get canvas context"));
+        finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: video.duration || 0, width: 640, height: 360 });
       }
-      URL.revokeObjectURL(url);
     };
 
     video.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Error loading video"));
+      finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: 0, width: 640, height: 360 });
     };
+
+    setTimeout(() => {
+      finish({ thumbnail: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', duration: 0, width: 640, height: 360 });
+    }, 5000);
 
     video.src = url;
   });

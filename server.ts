@@ -28,7 +28,7 @@ async function startServer() {
   
   app.use(express.json());
 
-  app.post('/api/upload', upload.single('video'), (req, res) => {
+  app.post('/api/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
